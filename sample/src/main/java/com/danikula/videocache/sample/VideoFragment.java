@@ -1,48 +1,86 @@
 package com.danikula.videocache.sample;
 
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
-import android.support.v4.app.Fragment;
 import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
 import android.widget.ImageView;
-import android.widget.ProgressBar;
+import android.widget.SeekBar;
 import android.widget.VideoView;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.fragment.app.Fragment;
 
 import com.danikula.videocache.CacheListener;
 import com.danikula.videocache.HttpProxyCacheServer;
 
-import org.androidannotations.annotations.AfterViews;
-import org.androidannotations.annotations.EFragment;
-import org.androidannotations.annotations.FragmentArg;
-import org.androidannotations.annotations.SeekBarTouchStop;
-import org.androidannotations.annotations.ViewById;
-
 import java.io.File;
 
-@EFragment(R.layout.fragment_video)
 public class VideoFragment extends Fragment implements CacheListener {
 
     private static final String LOG_TAG = "VideoFragment";
 
-    @FragmentArg String url;
-
-    @ViewById ImageView cacheStatusImageView;
-    @ViewById VideoView videoView;
-    @ViewById ProgressBar progressBar;
-
-    private final VideoProgressUpdater updater = new VideoProgressUpdater();
-
-    public static Fragment build(String url) {
-        return VideoFragment_.builder()
-                .url(url)
-                .build();
+    public static VideoFragment build(String url) {
+        VideoFragment fragment = new VideoFragment();
+        Bundle bundle = new Bundle();
+        bundle.putString("url", url);
+        fragment.setArguments(bundle);
+        return fragment;
     }
 
-    @AfterViews
-    void afterViewInjected() {
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        url = getArguments().getString("url", "");
+    }
+
+    @Nullable
+    @Override
+    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+        View view = inflater.inflate(R.layout.fragment_video, container, false);
+        cacheStatusImageView = view.findViewById(R.id.cacheStatusImageView);
+        videoView = view.findViewById(R.id.videoView);
+        progressBar = view.findViewById(R.id.progressBar);
+
+        return view;
+
+    }
+
+    @Override
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
         checkCachedState();
         startVideo();
+        progressBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                int videoPosition = videoView.getDuration() * progressBar.getProgress() / 100;
+                videoView.seekTo(videoPosition);
+            }
+        });
     }
+
+    String url;
+
+    ImageView cacheStatusImageView;
+    VideoView videoView;
+    SeekBar progressBar;
+
+    private final VideoProgressUpdater updater = new VideoProgressUpdater();
 
     private void checkCachedState() {
         HttpProxyCacheServer proxy = App.getProxy(getActivity());
@@ -92,12 +130,6 @@ public class VideoFragment extends Fragment implements CacheListener {
     private void updateVideoProgress() {
         int videoProgress = videoView.getCurrentPosition() * 100 / videoView.getDuration();
         progressBar.setProgress(videoProgress);
-    }
-
-    @SeekBarTouchStop(R.id.progressBar)
-    void seekVideo() {
-        int videoPosition = videoView.getDuration() * progressBar.getProgress() / 100;
-        videoView.seekTo(videoPosition);
     }
 
     private void setCachedState(boolean cached) {

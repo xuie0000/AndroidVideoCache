@@ -8,7 +8,7 @@ public enum Video {
     ORANGE_4(Config.ROOT + "orange4.mp4"),
     ORANGE_5(Config.ROOT + "orange5.mp4");
 
-    public final String url;
+    public String url;
 
     Video(String url) {
         this.url = url;
